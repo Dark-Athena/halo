@@ -43,9 +43,14 @@ COPY application ./application
 COPY --from=ui-builder /workspace/ui/build/dist ./ui/build/dist
 
 # Download YashanDB drivers and build the fat JAR.
+# -DdockerBuild: exclude the :ui subproject from the Gradle build (settings.gradle
+#   is conditional); the UI is pre-built in the ui-builder stage above and
+#   com.github.node-gradle.node 7.x is not compatible with the Gradle 9.x
+#   bundled in this image, so including :ui would fail.
 # -x check  : skip linting/tests (faster image build)
 # --no-daemon: don't keep a Gradle daemon process alive inside Docker
-RUN gradle downloadYashandbDrivers downloadPluginPresets \
+RUN gradle -DdockerBuild \
+        downloadYashandbDrivers downloadPluginPresets \
         :application:bootJar \
         -x check \
         --no-daemon
