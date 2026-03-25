@@ -1,7 +1,12 @@
 version: "3.1"
 services:
   halo:
-    image: ghcr.io/halo-dev/halo-dev:${TAG:-main}
+    # 使用本地 Dockerfile.build 从源码构建（包含 YashanDB 适配），
+    # 首次启动前请确保 Docker BuildKit 已启用（Docker 23+ 默认开启）。
+    # 构建命令：docker compose -f docker-compose-yashandb.yaml build
+    build:
+      context: .
+      dockerfile: Dockerfile.build
     container_name: halo
     restart: on-failure:3
     healthcheck:
