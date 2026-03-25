@@ -110,9 +110,11 @@ dependencies {
     runtimeOnly 'org.webjars.npm:jsencrypt:3.5.4'
     runtimeOnly 'org.webjars.npm:normalize.css:8.0.1'
 
-    // YashanDB R2DBC driver and its underlying JDBC dependency.
-    // Run `./gradlew downloadYashandbDrivers` to populate application/libs/ before building.
-    runtimeOnly fileTree(dir: 'libs', include: ['r2dbc-yashandb-*.jar', 'yashandb-jdbc-*.jar'])
+    // YashanDB R2DBC driver (local jar committed to libs/).
+    // Run `./gradlew downloadYashandbDrivers` to refresh the jar from GitHub Releases.
+    runtimeOnly fileTree(dir: 'libs', include: ['r2dbc-yashandb-*.jar'])
+    // YashanDB JDBC driver is now available on Maven Central.
+    runtimeOnly 'com.yashandb:yashandb-jdbc:1.9.24'
 }
 
 tasks.register('createChecksums', Checksum) {
@@ -172,13 +174,12 @@ tasks.register('downloadPluginPresets', Download) {
 }
 
 tasks.register('downloadYashandbDrivers', Download) {
-    // Downloads the YashanDB R2DBC driver and the underlying JDBC driver into application/libs/.
-    // Both JARs are needed to build Halo with YashanDB support.
-    // overwrite is false because both artifacts are versioned and immutable once released;
-    // delete the files manually from libs/ to force a fresh download.
+    // Downloads the YashanDB R2DBC driver into application/libs/.
+    // The YashanDB JDBC driver is now available on Maven Central and does not need to be downloaded separately.
+    // overwrite is false because the artifact is versioned and immutable once released;
+    // delete the file manually from libs/ to force a fresh download.
     src([
-            'https://github.com/Dark-Athena/r2dbc-yashandb/releases/download/v0.1.0/r2dbc-yashandb-0.1.0.jar',
-            'https://linked.yashandb.com/upload1010/yashandb-jdbc-1.9.3.jar',
+            'https://github.com/Dark-Athena/r2dbc-yashandb/releases/download/v0.1.1/r2dbc-yashandb-0.1.1.jar',
     ])
     dest layout.projectDirectory.dir('libs')
     overwrite false
