@@ -1,0 +1,49 @@
+version: '3.1'
+services:
+  testing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    links:
+      - halo
+    depends_on:
+      halo:
+        condition: service_healthy
+  halo:
+    image: ghcr.io/halo-dev/halo-dev:${TAG:-main}
+    restart: on-failure:10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 20
+      start_period: 180s
+    command:
+      - --spring.r2dbc.url=r2dbc:pool:yashandb://yashandb:1688/
+      - --spring.r2dbc.username=sys
+      - --spring.r2dbc.password=Enmo_123
+      - --spring.sql.init.platform=yashandb
+      - --spring.sql.init.mode=always
+      - --r2dbc.migrate.dialect=mysql
+      - --r2dbc.migrate.wait-for-database=false
+      - --spring.sql.init.continue-on-error=true
+      - --halo.security.basic-auth.disabled=false
+    links:
+      - yashandb
+    depends_on:
+      yashandb:
+        condition: service_healthy
+  yashandb:
+    image: yasdb/yashandb:${YASHANDB_VERSION:-23.4.7.100}
+    container_name: yashandb
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/1688' 2>/dev/null && echo OK || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 90s
+    environment:
+      - SYS_PASSWD=Enmo_123
+    ports:
+      - 1688:1688

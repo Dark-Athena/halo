@@ -1,0 +1,61 @@
+name: YashanDB CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - for-yashandb
+      - release-*
+    paths:
+      - "**"
+      - "!**.md"
+  push:
+    branches:
+      - for-yashandb
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-test-yashandb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-env
+
+      - name: Download YashanDB Drivers
+        run: ./gradlew downloadYashandbDrivers
+
+      - name: Build Halo
+        run: ./gradlew clean downloadPluginPresets build -x check --configuration-cache --configuration-cache-problems=warn
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: ghcr.io/halo-dev/halo-dev:main
+          push: false
+          load: true
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-linux-x86_64" \
+            -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: E2E Testing with YashanDB
+        run: cd e2e && make yashandb
+
+      - name: Collect Docker Logs on Failure
+        if: failure()
+        run: |
+          echo "=== Halo container logs ==="
+          docker-compose -f e2e/compose-yashandb.yaml logs --no-color halo || true
+          echo "=== YashanDB container logs ==="
+          docker-compose -f e2e/compose-yashandb.yaml logs --no-color yashandb || true

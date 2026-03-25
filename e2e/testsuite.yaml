@@ -17,7 +17,7 @@ items:
       Content-Type: application/x-www-form-urlencoded
       Accept: application/json
     body: |
-      siteTitle=testing&username={{.param.userName}}&password=123456&email=testing@halo.run
+      siteTitle=testing&username=admin&password=123456&email=testing@halo.run&externalUrl=http://halo:8090
   expect:
     statusCode: 204
 - name: createPost
@@ -27,6 +27,7 @@ items:
     header:
       Authorization: "{{.param.auth}}"
       Content-Type: application/json
+      X-Requested-With: XMLHttpRequest
     body: |
       {
         "post": {
