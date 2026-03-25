@@ -1,7 +1,6 @@
 package run.halo.app.infra.config;
 
 import io.r2dbc.spi.Connection;
-import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.Statement;
 import java.util.List;
 import name.nkonev.r2dbc.migrate.core.AbstractTableLocker;
@@ -13,10 +12,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
-import org.springframework.data.r2dbc.dialect.OracleDialect;
-import org.springframework.data.r2dbc.dialect.R2dbcDialect;
-import org.springframework.r2dbc.core.DatabaseClient;
-import org.springframework.r2dbc.core.binding.BindMarkersFactory;
 
 /**
  * Provides r2dbc-migrate {@link SqlQueries} and {@link Locker} beans that use
@@ -37,58 +32,15 @@ import org.springframework.r2dbc.core.binding.BindMarkersFactory;
  * script runs before r2dbc-migrate attempts to use the tables.
  *
  * <p>Spring Framework's {@code BindMarkersFactoryResolver} and Spring Data R2DBC's
- * {@code DialectResolver} do not know about "YashanDB" — both use a {@code spring.factories}
- * SPI that has built-in entries only for H2, MySQL, MariaDB, PostgreSQL, Oracle, and
- * MSSQL.  Since YashanDB is Oracle-compatible, we provide a {@link DatabaseClient} bean
- * configured with Oracle-style named bind markers and an {@link R2dbcDialect} bean
- * using {@link OracleDialect#INSTANCE}.  These user-defined beans take precedence over
- * Spring Boot's {@code @ConditionalOnMissingBean} auto-configurations.
+ * {@code DialectResolver} do not know about "YashanDB" out of the box; both use a
+ * {@code META-INF/spring.factories} SPI for extension.  The providers
+ * {@link YashanDbDialectProvider} and {@link YashanDbBindMarkersFactoryProvider}
+ * are registered in {@code META-INF/spring.factories} so that those resolvers can
+ * find and use them at class-initialisation time — before any Spring beans are created.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name = "spring.sql.init.platform", havingValue = "yashandb")
 class YashanDbMigrateConfiguration {
-
-    /**
-     * Maximum length for the sanitised portion of an Oracle-style named bind-marker name
-     * (e.g. the {@code name} part in {@code :Pname}).  Matches the limit used by
-     * Spring Framework's built-in Oracle {@code BindMarkersFactoryProvider}.
-     */
-    private static final int BIND_MARKER_NAME_MAX_LENGTH = 32;
-
-    /**
-     * Provides a {@link DatabaseClient} configured with Oracle-style named bind markers
-     * ({@code :Pname} format).  YashanDB is Oracle-compatible and its R2DBC driver
-     * supports {@code :name} style parameter binding (as proven by r2dbc-migrate using
-     * {@code :id}, {@code :descr} parameters successfully).
-     *
-     * <p>This bean overrides Spring Boot's auto-configured {@code DatabaseClient} which
-     * would call {@code BindMarkersFactoryResolver.resolve(connectionFactory)} — a call
-     * that throws {@code NoBindMarkersFactoryException} because "YashanDB" is not in
-     * Spring Framework's built-in provider list.
-     */
-    @Bean
-    DatabaseClient r2dbcDatabaseClient(ConnectionFactory connectionFactory) {
-        return DatabaseClient.builder()
-            .connectionFactory(connectionFactory)
-            .bindMarkers(BindMarkersFactory.named(":", "P", BIND_MARKER_NAME_MAX_LENGTH,
-                YashanDbMigrateConfiguration::filterBindMarkerName))
-            .build();
-    }
-
-    /**
-     * Provides an Oracle-compatible {@link R2dbcDialect} for Spring Data R2DBC.
-     *
-     * <p>{@link OracleDialect#INSTANCE} is used because YashanDB targets Oracle
-     * compatibility: it understands Oracle-style pagination ({@code FETCH FIRST n ROWS
-     * ONLY}), Oracle SQL types ({@code VARCHAR2}, {@code BLOB}, {@code NUMBER}), and
-     * Oracle-style named parameter binding.  This bean overrides Spring Boot's
-     * auto-configured dialect, which would call {@code DialectResolver.getDialect()}
-     * and fail because "YashanDB" is not registered with the built-in dialect provider.
-     */
-    @Bean
-    R2dbcDialect r2dbcDialect() {
-        return OracleDialect.INSTANCE;
-    }
 
     @Bean
     @DependsOn("r2dbcScriptDatabaseInitializer")
@@ -155,28 +107,6 @@ class YashanDbMigrateConfiguration {
                     "update " + lockTable + " set locked = 0 where id = 1");
             }
         };
-    }
-
-    /**
-     * Filters a parameter name to ASCII letters and digits, prepending {@code _} so the
-     * result can safely be embedded in an Oracle named-parameter marker ({@code :Pname}).
-     * This matches the sanitisation logic used by Spring Framework's built-in Oracle
-     * {@code BindMarkersFactoryProvider}.
-     */
-    private static String filterBindMarkerName(String name) {
-        StringBuilder sb = new StringBuilder(name.length());
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (Character.isLetterOrDigit(c) && c < 127) {
-                sb.append(c);
-            }
-        }
-        if (sb.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Parameter name '" + name + "' contains no ASCII alphanumeric characters "
-                    + "and cannot be used as an Oracle bind-marker name");
-        }
-        return "_" + sb;
     }
 
     private static String tableRef(String schema, String table) {

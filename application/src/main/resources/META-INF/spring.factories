@@ -1,0 +1,12 @@
+# Spring Data R2DBC dialect provider for YashanDB.
+# DialectResolver loads this via SpringFactoriesLoader at class-initialisation time,
+# which is the only way to provide a dialect before DataR2dbcAutoConfiguration's
+# constructor calls DialectResolver.getDialect(connectionFactory).
+org.springframework.data.r2dbc.dialect.DialectResolver$R2dbcDialectProvider=\
+  run.halo.app.infra.config.YashanDbDialectProvider
+
+# Spring Framework bind-markers factory provider for YashanDB.
+# BindMarkersFactoryResolver loads this via SpringFactoriesLoader; it is used by
+# DatabaseClient.create() to resolve the BindMarkersFactory for the connection factory.
+org.springframework.r2dbc.core.binding.BindMarkersFactoryResolver$BindMarkerFactoryProvider=\
+  run.halo.app.infra.config.YashanDbBindMarkersFactoryProvider
