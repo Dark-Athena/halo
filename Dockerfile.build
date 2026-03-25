@@ -23,12 +23,13 @@ RUN pnpm run build:packages && pnpm run build
 # =====================================================================
 # Stage 2: Build the Spring Boot application (with YashanDB drivers)
 # =====================================================================
-FROM eclipse-temurin:21-jdk AS app-builder
+# Use the official Gradle image (Gradle pre-installed, no download needed).
+FROM gradle:9.4-jdk21 AS app-builder
 
 WORKDIR /workspace
 
-# Copy Gradle wrapper and build configuration first to maximise cache hits
-COPY gradlew gradlew.bat gradle.properties settings.gradle ./
+# Copy build configuration
+COPY gradle.properties settings.gradle ./
 COPY gradle ./gradle
 COPY buildSrc ./buildSrc
 COPY api ./api
@@ -41,13 +42,10 @@ COPY application ./application
 # the `copyUiDist` Gradle task finds it.
 COPY --from=ui-builder /workspace/ui/build/dist ./ui/build/dist
 
-# Make Gradle wrapper executable
-RUN chmod +x gradlew
-
 # Download YashanDB drivers and build the fat JAR.
 # -x check  : skip linting/tests (faster image build)
 # --no-daemon: don't keep a Gradle daemon process alive inside Docker
-RUN ./gradlew downloadYashandbDrivers downloadPluginPresets \
+RUN gradle downloadYashandbDrivers downloadPluginPresets \
         :application:bootJar \
         -x check \
         --no-daemon
