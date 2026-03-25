@@ -15,3 +15,6 @@ r2dbc:
     # Override the default dialect (which would resolve to "yashandb" and fail enum binding).
     # The actual SQL for the migration-tracking tables is provided by YashanDbMigrateConfiguration.
     dialect: mysql
+    # YashanDB does not support implicit-table queries (SELECT without FROM).
+    # Use Oracle-style "FROM DUAL" for the connectivity validation query.
+    validation-query: "select '42' as validation_result from dual"
