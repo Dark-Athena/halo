@@ -1,0 +1,17 @@
+spring:
+  r2dbc:
+    url: r2dbc:pool:yashandb://localhost:1688/
+    # Default credentials for local development; override via environment variables
+    # (e.g. SPRING_R2DBC_USERNAME / SPRING_R2DBC_PASSWORD) or command-line arguments
+    # when deploying to a non-local environment.
+    username: sys
+    password: Enmo_123
+  sql:
+    init:
+      mode: always
+      platform: yashandb
+r2dbc:
+  migrate:
+    # Override the default dialect (which would resolve to "yashandb" and fail enum binding).
+    # The actual SQL for the migration-tracking tables is provided by YashanDbMigrateConfiguration.
+    dialect: mysql
