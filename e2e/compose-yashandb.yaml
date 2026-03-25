@@ -26,6 +26,7 @@ services:
       - --spring.sql.init.mode=always
       - --r2dbc.migrate.dialect=mysql
       - --r2dbc.migrate.wait-for-database=false
+      - --spring.sql.init.continue-on-error=true
     links:
       - yashandb
     depends_on:

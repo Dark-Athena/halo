@@ -10,6 +10,10 @@ spring:
     init:
       mode: always
       platform: yashandb
+      # YashanDB does not support CREATE TABLE IF NOT EXISTS; plain CREATE TABLE is used
+      # instead. On application restart the schema-yashandb.sql CREATE TABLE statements
+      # fail with "table already exists" — this flag makes Spring ignore those errors.
+      continue-on-error: true
 r2dbc:
   migrate:
     # Override the default dialect (which would resolve to "yashandb" and fail enum binding).
