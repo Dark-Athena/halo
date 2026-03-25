@@ -27,6 +27,7 @@ services:
       - --r2dbc.migrate.dialect=mysql
       - --r2dbc.migrate.wait-for-database=false
       - --spring.sql.init.continue-on-error=true
+      - --halo.security.basic-auth.disabled=false
     links:
       - yashandb
     depends_on:

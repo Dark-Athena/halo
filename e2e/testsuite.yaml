@@ -27,6 +27,7 @@ items:
     header:
       Authorization: "{{.param.auth}}"
       Content-Type: application/json
+      X-Requested-With: XMLHttpRequest
     body: |
       {
         "post": {
