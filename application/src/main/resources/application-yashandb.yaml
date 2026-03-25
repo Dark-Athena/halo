@@ -1,0 +1,27 @@
+spring:
+  r2dbc:
+    url: r2dbc:pool:yashandb://localhost:1688/
+    # Default credentials for local development; override via environment variables
+    # (e.g. SPRING_R2DBC_USERNAME / SPRING_R2DBC_PASSWORD) or command-line arguments
+    # when deploying to a non-local environment.
+    username: sys
+    password: Enmo_123
+  sql:
+    init:
+      mode: always
+      platform: yashandb
+      # YashanDB does not support CREATE TABLE IF NOT EXISTS; plain CREATE TABLE is used
+      # instead. On application restart the schema-yashandb.sql CREATE TABLE statements
+      # fail with "table already exists" — this flag makes Spring ignore those errors.
+      continue-on-error: true
+r2dbc:
+  migrate:
+    # Override the default dialect (which would resolve to "yashandb" and fail enum binding).
+    # The actual SQL for the migration-tracking tables is provided by YashanDbMigrateConfiguration.
+    dialect: mysql
+    # YashanDB does not support implicit-table queries (SELECT without FROM).
+    # The r2dbc-pool PooledConnection.validate() delegates directly to the YashanDB
+    # driver, which issues "SELECT 1" internally — rejected as "implicit table".
+    # Disabling wait-for-database avoids this driver-level incompatibility; the
+    # compose depends_on/restart policy provides the equivalent startup safety net.
+    wait-for-database: false
