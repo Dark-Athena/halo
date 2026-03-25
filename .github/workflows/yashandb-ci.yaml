@@ -51,3 +51,11 @@ jobs:
 
       - name: E2E Testing with YashanDB
         run: cd e2e && make yashandb
+
+      - name: Collect Docker Logs on Failure
+        if: failure()
+        run: |
+          echo "=== Halo container logs ==="
+          docker-compose -f e2e/compose-yashandb.yaml logs --no-color halo || true
+          echo "=== YashanDB container logs ==="
+          docker-compose -f e2e/compose-yashandb.yaml logs --no-color yashandb || true
