@@ -201,6 +201,13 @@ tasks.register('downloadYashandbDrivers', Download) {
     overwrite false
 }
 
+// bootJar packs the runtime classpath which includes r2dbc-yashandb-*.jar from libs/.
+// That file is produced by downloadYashandbDrivers, so declare the dependency explicitly
+// to satisfy Gradle 9 implicit-dependency validation.
+tasks.named('bootJar') {
+    dependsOn tasks.named('downloadYashandbDrivers')
+}
+
 openApi {
     outputDir = file("$rootDir/api-docs/openapi/v3_0")
     groupedApiMappings = [
