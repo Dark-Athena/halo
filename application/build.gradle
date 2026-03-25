@@ -79,6 +79,8 @@ bootJar {
 
 gitProperties {
     dotGitDirectory = layout.settingsDirectory.dir('.git')
+    // In Docker builds there is no .git directory; skip gracefully rather than failing.
+    failOnNoGitDirectory = false
 }
 
 tasks.named('jar') {
