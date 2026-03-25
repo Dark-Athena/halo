@@ -25,6 +25,7 @@ services:
       - --spring.sql.init.platform=yashandb
       - --spring.sql.init.mode=always
       - --r2dbc.migrate.dialect=mysql
+      - --r2dbc.migrate.wait-for-database=false
     links:
       - yashandb
     depends_on:

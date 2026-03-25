@@ -16,5 +16,8 @@ r2dbc:
     # The actual SQL for the migration-tracking tables is provided by YashanDbMigrateConfiguration.
     dialect: mysql
     # YashanDB does not support implicit-table queries (SELECT without FROM).
-    # Use Oracle-style "FROM DUAL" for the connectivity validation query.
-    validation-query: "select '42' as validation_result from dual"
+    # The r2dbc-pool PooledConnection.validate() delegates directly to the YashanDB
+    # driver, which issues "SELECT 1" internally — rejected as "implicit table".
+    # Disabling wait-for-database avoids this driver-level incompatibility; the
+    # compose depends_on/restart policy provides the equivalent startup safety net.
+    wait-for-database: false
