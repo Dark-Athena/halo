@@ -20,16 +20,16 @@ services:
       # YashanDB 用户名，默认使用 sys
       - --spring.r2dbc.username=sys
       # YashanDB 密码，请保证与下方 SYS_PASSWD 的变量值一致
-      - --spring.r2dbc.password=Enmo_123
+      - --spring.r2dbc.password=${YASHANDB_SYS_PASSWD:-Enmo_123}
       - --spring.sql.init.platform=yashandb
       - --spring.sql.init.mode=always
       - --spring.sql.init.continue-on-error=true
+      # YashanDB 兼容 MySQL SQL 语法，因此迁移方言使用 mysql
       - --r2dbc.migrate.dialect=mysql
+      # YashanDB 已处于健康状态（依赖 depends_on），无需再等待数据库就绪
       - --r2dbc.migrate.wait-for-database=false
       # 外部访问地址，请根据实际需要修改
       # - --halo.external-url=http://localhost:8090/
-    links:
-      - yashandb
     depends_on:
       yashandb:
         condition: service_healthy
@@ -46,6 +46,6 @@ services:
     volumes:
       - ./yashandb-data:/home/yashan/yashandb
     environment:
-      - SYS_PASSWD=Enmo_123
+      - SYS_PASSWD=${YASHANDB_SYS_PASSWD:-Enmo_123}
     ports:
       - 1688:1688
