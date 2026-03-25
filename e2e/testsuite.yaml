@@ -78,7 +78,11 @@ items:
 - name: recover
   request:
     api: /content.halo.run/v1alpha1/posts/{{(index .listPosts.items 0).post.metadata.name}}
-    method: DELETE
+    method: GET
+  expect:
+    statusCode: 200
+    verify:
+      - data.spec.deleted == true
 
 ## Users
 - name: createUser
