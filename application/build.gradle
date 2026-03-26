@@ -79,6 +79,8 @@ bootJar {
 
 gitProperties {
     dotGitDirectory = layout.settingsDirectory.dir('.git')
+    // In Docker builds there is no .git directory; skip gracefully rather than failing.
+    failOnNoGitDirectory = false
 }
 
 tasks.named('jar') {
@@ -125,9 +127,23 @@ tasks.register('createChecksums', Checksum) {
 }
 
 tasks.register('copyUiDist', Copy) {
-    from project(':ui').layout.buildDirectory.dir('dist')
+    // Use a path-based reference so this task works even when the :ui
+    // subproject is excluded from the build (e.g. Docker builds where the
+    // UI is pre-built in a separate stage).
+    from rootProject.layout.projectDirectory.dir('ui/build/dist')
     into layout.buildDirectory.dir('resources/main')
-    mustRunAfter ':ui:doBuild'
+}
+
+// Wire the optional ordering constraint after all projects have been
+// evaluated.  mustRunAfter ':ui:doBuild' is NOT used inline because
+// com.github.node-gradle.node 7.x is incompatible with Gradle 9.x and
+// may not register PnpmTask tasks; Gradle 9 turns a missing-task
+// mustRunAfter reference into a hard error rather than silently ignoring it.
+gradle.projectsEvaluated {
+    def uiDoBuild = rootProject.findProject(':ui')?.tasks?.findByName('doBuild')
+    if (uiDoBuild != null) {
+        tasks.named('copyUiDist').configure { t -> t.mustRunAfter(uiDoBuild) }
+    }
 }
 
 tasks.named('classes') {
@@ -183,6 +199,13 @@ tasks.register('downloadYashandbDrivers', Download) {
     ])
     dest layout.projectDirectory.dir('libs')
     overwrite false
+}
+
+// bootJar packs the runtime classpath which includes r2dbc-yashandb-*.jar from libs/.
+// That file is produced by downloadYashandbDrivers, so declare the dependency explicitly
+// to satisfy Gradle 9 implicit-dependency validation.
+tasks.named('bootJar') {
+    dependsOn tasks.named('downloadYashandbDrivers')
 }
 
 openApi {

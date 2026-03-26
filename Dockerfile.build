@@ -1,0 +1,92 @@
+# =====================================================================
+# Stage 1: Build the Vue.js UI (console & uc)
+# =====================================================================
+FROM node:24-slim AS ui-builder
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10 --activate
+
+WORKDIR /workspace/ui
+
+# Copy UI dependency manifests first to leverage layer cache
+COPY ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ui/package.json ./
+COPY ui/packages ./packages
+COPY ui/patches ./patches
+
+RUN pnpm install --frozen-lockfile
+
+# Copy remaining UI sources and build
+COPY ui/ ./
+
+RUN pnpm run build:packages && pnpm run build
+
+# =====================================================================
+# Stage 2: Build the Spring Boot application (with YashanDB drivers)
+# =====================================================================
+# Use the official Gradle image (Gradle pre-installed, no download needed).
+FROM gradle:9.4-jdk21 AS app-builder
+
+WORKDIR /workspace
+
+# Copy build configuration
+COPY gradle.properties settings.gradle ./
+COPY gradle ./gradle
+COPY buildSrc ./buildSrc
+COPY api ./api
+COPY platform ./platform
+
+# Copy application source (excluding ui, which comes from Stage 1)
+COPY application ./application
+
+# Copy the UI distribution built in Stage 1 into the expected location so
+# the `copyUiDist` Gradle task finds it.
+COPY --from=ui-builder /workspace/ui/build/dist ./ui/build/dist
+
+# Download YashanDB drivers and build the fat JAR.
+# -DdockerBuild: exclude the :ui subproject from the Gradle build (settings.gradle
+#   is conditional); the UI is pre-built in the ui-builder stage above and
+#   com.github.node-gradle.node 7.x is not compatible with the Gradle 9.x
+#   bundled in this image, so including :ui would fail.
+# -x check  : skip linting/tests (faster image build)
+# --no-daemon: don't keep a Gradle daemon process alive inside Docker
+RUN gradle -DdockerBuild \
+        downloadYashandbDrivers downloadPluginPresets \
+        :application:bootJar \
+        -x check \
+        --no-daemon
+
+# =====================================================================
+# Stage 3: Extract JAR layers for efficient Docker layer caching
+# =====================================================================
+FROM eclipse-temurin:21-jre AS layer-extractor
+
+WORKDIR /application
+
+COPY --from=app-builder /workspace/application/build/libs/*.jar application.jar
+RUN java -Djarmode=layertools -jar application.jar extract
+
+# =====================================================================
+# Stage 4: Final runtime image
+# =====================================================================
+FROM ibm-semeru-runtimes:open-21-jre
+
+LABEL maintainer="Dark-Athena"
+
+WORKDIR application
+
+COPY --from=layer-extractor /application/dependencies/ ./
+COPY --from=layer-extractor /application/spring-boot-loader/ ./
+COPY --from=layer-extractor /application/snapshot-dependencies/ ./
+COPY --from=layer-extractor /application/application/ ./
+
+ENV JVM_OPTS="" \
+    HALO_WORK_DIR="/root/.halo2" \
+    SPRING_CONFIG_LOCATION="optional:classpath:/;optional:file:/root/.halo2/" \
+    TZ=Asia/Shanghai
+
+RUN ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
+
+EXPOSE 8090
+
+ENTRYPOINT ["sh", "-c", "java ${JVM_OPTS} org.springframework.boot.loader.launch.JarLauncher ${0} ${@}"]

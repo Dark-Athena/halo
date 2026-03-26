@@ -6,4 +6,10 @@ pluginManagement {
 }
 
 rootProject.name = 'halo'
-include 'api', 'application', 'platform:application', 'platform:plugin', 'ui'
+include 'api', 'application', 'platform:application', 'platform:plugin'
+// ':ui' requires Node.js / pnpm.  It is excluded in Docker builds where the
+// Vue.js front-end is pre-built in a separate stage.  Pass
+// -DdockerBuild=true to opt out (e.g. in Dockerfile.build).
+if (!providers.systemProperty('dockerBuild').isPresent()) {
+    include 'ui'
+}
