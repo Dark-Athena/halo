@@ -195,7 +195,7 @@ tasks.register('downloadYashandbDrivers', Download) {
     // overwrite is false because the artifact is versioned and immutable once released;
     // delete the file manually from libs/ to force a fresh download.
     src([
-            'https://github.com/Dark-Athena/r2dbc-yashandb/releases/download/v0.1.2/r2dbc-yashandb-0.1.2.jar',
+            'https://github.com/Dark-Athena/r2dbc-yashandb/releases/download/v0.1.4/r2dbc-yashandb-0.1.4.jar',
     ])
     dest layout.projectDirectory.dir('libs')
     overwrite false
