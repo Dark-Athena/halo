@@ -26,6 +26,9 @@ RUN pnpm run build:packages && pnpm run build
 # Use the official Gradle image (Gradle pre-installed, no download needed).
 FROM gradle:9.4-jdk21 AS app-builder
 
+# 解决TLS协议问题，强制指定TLS版本
+ENV JAVA_TOOL_OPTIONS="-Djdk.tls.client.protocols=TLSv1.2,TLSv1.3"
+
 WORKDIR /workspace
 
 # Copy build configuration
